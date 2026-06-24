@@ -1,11 +1,11 @@
 ---
 name: vn-technical-analysis
-description: Phân tích kỹ thuật cổ phiếu VN từ data giá THẬT (vnstock API) — tính MA/RSI/MACD/Bollinger/Beta/Correlation, phát hiện candlestick & chart patterns thật, divergence check thành thật, và render biểu đồ nến + volume. Use khi user hỏi "phân tích kỹ thuật", "có nên mua/bán giờ", "khi nào vào lệnh", "beta/correlation", "mô hình nến/giá", hoặc khi cần mảnh ghép thứ 3 (timing) cho bộ phân tích equity research VN. Cốt lõi = data từ vnstock (VCI source), KHÔNG BAO GIỜ ngụy tạo/mô phỏng data giá.
+description: Phân tích kỹ thuật cổ phiếu VN từ data giá THẬT (vnstock API) theo 2 mode. Mode ACTIVE — tính MA/RSI/MACD/Bollinger/Beta/Correlation, phát hiện candlestick & chart patterns thật, divergence check thành thật, render biểu đồ nến + volume, đưa Tech Score → Verdict BUY/SELL. Mode PROFILE — phân tích hồ sơ giá-khối lượng định lượng (28 block methodology từ market_stats: volatility, drawdown, VPCI/OBV/CMF, effort-result Wyckoff, volume-at-price, tail risk VaR/ES, pattern scoring, archetype), ngôn ngữ phi-tư-vấn (neutral_descriptive_non_advice). Use khi user hỏi "phân tích kỹ thuật", "có nên mua/bán giờ" (ACTIVE), "hồ sơ cổ phiếu / personality / hành vi giá-khối lượng" (PROFILE), "beta/correlation", "mô hình nến/giá". Cốt lõi = data từ vnstock (VCI source), KHÔNG BAO GIỜ ngụy tạo/mô phỏng data giá.
 ---
 
 # VN Technical Analysis
 
-Phân tích kỹ thuật từ **data giá thực vnstock** — trả lời câu hỏi "khi nào mua/bán" (timing) mà fundamental và news không trả lời được.
+Phân tích kỹ thuật từ **data giá thực vnstock** — trả lời câu hỏi "khi nào mua/bán" (timing, mode ACTIVE) hoặc "hồ sơ hành vi giá-khối lượng" (mode PROFILE) mà fundamental và news không trả lời được.
 
 ## ⚠️ Nguyên tắc tối thượng: KHÔNG NGỤY TẠO DATA
 
@@ -17,7 +17,32 @@ Phân tích kỹ thuật từ **data giá thực vnstock** — trả lời câu 
 
 Nếu không fetch được data → **nói thẳng "không có data"**, KHÔNG tự bổ sung bằng mô phỏng.
 
-## Workflow 4 bước
+## 🎚️ Chọn mode (ACTIVE vs PROFILE)
+
+Skill có 2 mode phân tích. **Mặc định = ACTIVE** (không phá hành vi cũ). Chuyển sang PROFILE khi user hỏi rõ "hồ sơ / personality / hành vi giá-khối lượng / mô tả" hoặc khi cần context phi-tư-vấn cho fundamental/valuation.
+
+| | **Mode ACTIVE** (cũ) | **Mode PROFILE** (mới) |
+|---|---|---|
+| **Câu hỏi trả lời** | "Có nên mua/bán giờ? Timing?" | "Hồ sơ cổ phiếu này thế nào? Personality?" |
+| **Ngôn ngữ** | Tech Score → Verdict BUY/SELL, "bullish/bearish", "tín hiệu" | `neutral_descriptive_non_advice` — mô tả, KHÔNG verdict |
+| **Output** | HTML dashboard + JSON (tech_score, verdict) | Markdown narrative + JSON profile (28 block subset) |
+| **Indicators** | MA/RSI/MACD/Bollinger | 15 block định lượng: volatility, drawdown, VPCI/OBV/CMF, effort-result, VAP, VaR/ES, PVI/NVI, regime |
+| **Patterns** | Double Bottom, Channel, Candlestick, Divergence (thủ công) | 8 setup heuristic + archetype + behavior (scoring 0-100) |
+| **So sánh** | Beta/Correlation vs VNINDEX/VN30 | + best-fit benchmark, regime, drawdown similarity, peer percentile |
+| **Guardrail** | "Cổ phiếu chu kỳ" note | Bắt buộc 4 điểm non-conclusion + metric guardrail |
+| **Reference** | `indicators.md`, `pattern_detection.md` | `stock_profile_blocks.md`, `pattern_scoring.md`, `metric_guardrails.md` |
+| **Dependency** | Chỉ vnstock | Chỉ vnstock |
+
+**Khi nào dùng mode nào:**
+- **ACTIVE**: user hỏi "có nên mua/bán", "timing", "tín hiệu vào/ra lệnh", "overbought/oversold", "MACD/RSI". Cần verdict rõ ràng.
+- **PROFILE**: user hỏi "hồ sơ", "personality", "hành vi giá", "đặc điểm cổ phiếu", "so với lịch sử của chính nó", "dòng tiền". Cần mô tả sâu, không khuyến nghị.
+- **Không rõ**: hỏi lại user, hoặc dùng ACTIVE (mặc định).
+
+> **Quan trọng:** KHÔNG trộn ngôn ngữ 2 mode. Mode PROFILE KHÔNG bao giờ xuất "BUY/SELL/bullish/tín hiệu". Mode ACTIVE KHÔNG xuất guardrail phi-tư-vấn dài dòng.
+
+---
+
+## Workflow mode ACTIVE (4 bước)
 
 ### Bước 1: Fetch data giá thực từ vnstock
 
@@ -164,9 +189,190 @@ Tính score từ 6 signals (mỗi signal ±1):
 - **Dashboard**: `vn-research-dashboard` (ghép technical vào report)
 - **News**: `vn-news-digest`
 
+> **Mode PROFILE** bổ sung context hành vi giá-khối lượng cho `vn-fundamental-analysis`/`vn-valuation-engine` **mà không đưa khuyến nghị** — profile trả lời "cổ phiếu này hành xử thế nào", fundamental/valuation trả lời "nó đáng bao nhiêu".
+
+---
+
+## Workflow mode PROFILE (5 bước)
+
+Phân tích hồ sơ cổ phiếu định lượng theo methodology `market_stats` — **"What I See"**, mô tả lịch sử, KHÔNG verdict. Chi tiết công thức từng block xem `references/stock_profile_blocks.md`, pattern/archetype xem `references/pattern_scoring.md`, ngôn ngữ guardrail xem `references/metric_guardrails.md`.
+
+### Bước 1: Fetch data thực từ vnstock (daily OHLCV)
+
+```python
+from vnstock.api.quote import Quote
+import pandas as pd
+
+# ⚠️ Cần DAILY (interval='1D'), KHÔNG phải weekly như mode active
+# Lấy ~2 năm (≈500 phiên) để có đủ sample cho rolling 252 + percentile
+q = Quote(symbol='HPG', source='VCI')
+df = q.history(start='2024-01-01', end='2026-06-24', interval='1D')
+df = df.dropna(subset=['close']).sort_values('time')
+
+# ⚠️ Giá = NGHÌN đồng → value = close * volume * 1000 (ra đồng)
+rows = []
+for _, r in df.iterrows():
+    rows.append({
+        "date": str(r['time'])[:10],
+        "open": float(r['open']), "high": float(r['high']),
+        "low": float(r['low']), "close": float(r['close']),
+        "volume": float(r['volume']),
+        "value": float(r['close']) * float(r['volume']) * 1000,  # đồng
+        "range_pct": (float(r['high']) - float(r['low'])) / float(r['close']) * 100,
+    })
+
+# VNINDEX + VN30 (cho benchmark/regime)
+q_vni = Quote(symbol='VNINDEX', source='VCI')
+vni_rows = [...]  # cùng format
+q_vn30 = Quote(symbol='VN30', source='VCI')
+vn30_rows = [...]
+```
+
+⚠️ **Bẫy**: nếu `< 60 phiên` → trả error "không đủ dữ liệu profile". Cần ≥252 phiên cho đầy đủ block 1-year.
+
+### Bước 2: Tính 15 block profile
+
+Import helpers + các block từ `references/stock_profile_blocks.md`. Mỗi block nhận `rows` (daily OHLCV đã có `value`). Tính theo thứ tự:
+
+```python
+# (code đầy đủ trong references/stock_profile_blocks.md)
+profile = {
+    "price_behavior_profile": price_behavior_profile(rows),
+    "volatility_profile": volatility_profile(rows),
+    "drawdown_profile": drawdown_profile(rows),
+    "liquidity_profile": liquidity_profile(rows),
+    "return_distribution_profile": return_distribution_profile(rows),
+    "tail_risk_profile": tail_risk_profile(rows),
+    "liquidity_risk_profile": liquidity_risk_profile(rows),
+    "volume_price_profile": volume_price_profile(rows),
+    "volume_price_confirmation_profile": vpci_profile(rows),
+    "money_flow_pressure_profile": money_flow_profile(rows),
+    "effort_result_profile": effort_result_profile(rows),
+    "high_volume_behavior_profile": high_volume_behavior_profile(rows),
+    "pvi_nvi_participation_profile": pvi_nvi_profile(rows),
+    "volume_at_price_profile": volume_at_price_profile(rows),
+}
+# Benchmark blocks (cần VNINDEX + VN30)
+rs = relative_strength_profile(rows, vni_rows, {"VNINDEX": vni_rows, "VN30": vn30_rows})
+profile.update(rs)
+profile["regime_profile"] = regime_profile(rows, vni_rows)
+# industry_peer_profile (nếu có data ngành) — optional
+```
+
+### Bước 3: Pattern scoring + archetype
+
+Xem `references/pattern_scoring.md`. Tính được:
+- 8 setup heuristic chiều tăng (score 0-100, status, reader_note)
+- 5 pattern family classification
+- Stock archetype (4 loại: trend_following / accumulation_breakout / trap_prone / mixed)
+
+```python
+setups = scan_setups(rows)  # top 6, sort theo completion_score desc
+archetype = estimate_archetype(setups, profile["high_volume_behavior_profile"])
+```
+
+### Bước 4: Sinh narrative non-advice
+
+Tuân thủ NGHIÊM `references/metric_guardrails.md`:
+
+1. Tra `metric_dictionary()` cho mỗi metric → dùng `label_vi` + kèm `guardrail`.
+2. Tra `CONSUMER_LABELS` cho status kỹ thuật → Việt.
+3. Áp `scrub_copy()` cho text template.
+4. Kiểm `forbidden` list — không lọt "bullish/bearish/tín hiệu/khuyến nghị".
+5. Dịch thuật ép buộc (Drawdown→Mức giảm...).
+6. **Cuối report** thêm `non_conclusion_panel()` (4 điểm, ít nhất điểm 1+2 bắt buộc).
+
+### Bước 5: Output — Dashboard HTML single-page + JSON
+
+**Output chính: dashboard HTML** — dùng `assets/profile_template.html` (single-page, dark theme, Chart.js). Pattern hấp thụ từ skill `longform` (component + chart recipe). Xem `references/profile_render.md` cho:
+- Bảng mapping đầy đủ profile JSON field → `{{TOKEN}}`
+- Format 4 chart data object (rolling/dist/VAP/benchmark)
+- Non-advice language check + QA checklist
+
+```python
+import shutil, json
+# 1. Copy template
+shutil.copy("assets/profile_template.html", f"{output_dir}/{symbol}_profile.html")
+html = open(f"{output_dir}/{symbol}_profile.html").read()
+
+# 2. Build token map từ profile JSON (Bước 2-3) + rows
+TOKEN_MAP = {
+    "TICKER": symbol,
+    "COMPANY_NAME": company_name,  # từ vnstock overview
+    "LATEST_CLOSE_DISPLAY": f"{latest_close*1000:,.0f}",  # nghìn→đồng
+    # ... full map trong references/profile_render.md
+    "ROLLING_DATA": json.dumps(rolling_obj, ensure_ascii=False),
+    "DIST_DATA": json.dumps(dist_obj, ensure_ascii=False),
+    "VAP_DATA": json.dumps(vap_obj, ensure_ascii=False),
+    "BENCH_DATA": json.dumps(bench_obj, ensure_ascii=False),
+}
+# 3. String replace (KHÔNG f-string/.format — JS có {} sẽ vỡ)
+for token, value in TOKEN_MAP.items():
+    html = html.replace("{{" + token + "}}", str(value))
+open(f"{output_dir}/{symbol}_profile.html", "w").write(html)
+```
+
+Cấu trúc dashboard (7 section, scroll single-page, không minimap/chapter):
+1. **Hero** — ticker, giá, 6 KPI strip (return 1M/3M/1Y, HV60, mức giảm, Beta·R²)
+2. **Đọc như** (profile read card) — archetype primary + reader_note + icon. **KHÔNG verdict BUY/SELL.**
+3. **Vị trí giá & biến động** — rolling percentile chart + bảng HV20/60/120/252
+4. **Mức giảm & rủi ro đuôi** — distribution histogram chart + VaR/ES table
+5. **Dòng tiền & xác nhận** — VPCI/CMF/HVB cards + guardrail
+6. **So VNINDEX** — base-100 line chart (resample monthly) + beta/corr/R² table
+7. **Volume-at-price** — horizontal bar chart + POC/acceptance
+8. **Mẫu hình & archetype** — setups table + reader_note
+9. **Lưu ý khi đọc** — 4 điểm non-conclusion (callout warn) + minh bạch dữ liệu
+
+**QA bắt buộc** (xem `references/profile_render.md`):
+```bash
+grep -oE "{{[A-Z_0-9]+}}" {output}.html | sort -u           # Check 1: trống (không sót token)
+# canvas count == new Chart count (Check 2, =4)
+node --check /tmp/profile_check.js                           # Check 3: JS syntax OK
+grep -iE "bullish|bearish|tín hiệu|khuyến nghị|nên mua|nên bán" {output}.html | grep -v "<script>"  # Check 4: trống
+```
+
+**Output phụ: JSON** (schema `vn-technical-profile-v1`) — giữ lại cho pipeline downstream, schema như Bước 2-3 output. Markdown narrative ngắn có thể kèm nếu user muốn copy text.
+
+**Output JSON** (schema `vn-technical-profile-v1`):
+```json
+{
+  "schema": "vn-technical-profile-v1",
+  "generated_at": "2026-06-24T...",
+  "language_policy": "neutral_descriptive_non_advice",
+  "symbol": "HPG",
+  "stock_identity": {"symbol": "HPG", "sample_size": 480},
+  "price_behavior_profile": {
+    "latest_close": 23600, "return_1m_pct": 2.1, "return_1y_pct": 8.4,
+    "high_52w": 27540, "low_52w": 19120,
+    "distance_from_52w_high_pct": -14.2,
+    "rolling_returns": [{"window": 63, "current_return_pct": 3.2, "percentile": 62, "...": "..."}],
+    "interpretation_guardrail": "Hành vi giá là quan sát lịch sử; không phải dự báo xu hướng tương lai."
+  },
+  "volatility_profile": {"hv60_pct": 34.5, "hv60_percentile_1y": 45, "...": "..."},
+  "drawdown_profile": {"current_drawdown_pct": -8.1, "max_drawdown_pct": -28.4, "...": "..."},
+  "volume_price_confirmation_profile": {"vpci_latest": 0.012, "confirmation_label": "giá-volume cùng xác nhận", "...": "..."},
+  "money_flow_pressure_profile": {"cmf_20d": 0.04, "money_flow_label": "áp lực tiền dương", "...": "..."},
+  "setups": [{"pattern_id": "triangles_ascending", "pattern_name": "Tam giác tăng", "completion_score": 71, "setup_status": "đang hình thành", "...": "..."}],
+  "non_conclusion": [
+    "Không kết luận đây là khuyến nghị hoặc lời gọi giao dịch.",
+    "Tỷ lệ trong quá khứ không đảm bảo lặp lại trong tương lai."
+  ]
+}
+```
+
+---
+
 ## Tham khảo
 
+**Mode ACTIVE (cũ):**
 - `references/vnstock_usage.md` — Code Python fetch giá + indicators (Quote, history, dropna, đơn vị nghìn đồng)
 - `references/indicators.md` — Công thức + code Node.js/Python cho MA/RSI/MACD/Bollinger/Beta/Correlation
 - `references/pattern_detection.md` — Code phát hiện Double Bottom, Channel, Candlestick, Divergence (với điều kiện evidence rõ)
 - `assets/technical_template.html` — Template HTML (candlestick canvas + Chart.js + correlation)
+
+**Mode PROFILE (mới):**
+- `references/stock_profile_blocks.md` — 17 block profile cốt lõi (price_behavior, volatility, drawdown, VPCI/OBV/CMF, effort-result, VAP, VaR/ES, PVI/NVI, regime) + code Python port từ `build_stock_profile_foundation.mjs`. **100% portable với vnstock.**
+- `references/pattern_scoring.md` — 8 setup detection heuristic (chiều tăng) + 5 pattern family + 4 stock archetype. **100% portable với vnstock.**
+- `references/metric_guardrails.md` — 13 metric dictionary (label_vi + guardrail) + CONSUMER_LABELS + scrubCopy rules + 4 điểm non-conclusion + bảng dịch thuật ép buộc + cấm list + glossary 30 term. **100% portable.**
+- `assets/profile_template.html` — **Template dashboard HTML single-page** (mode PROFILE). Dark theme + Chart.js (4 chart: rolling/dist/VAP/benchmark). Dùng `{{TOKEN}}` placeholder. Đồng nhất visual với `technical_template.html`. Pattern hấp thụ từ skill `longform`.
+- `references/profile_render.md` — Recipe map profile JSON → `{{TOKEN}}` + format 4 chart data + non-advice language check + QA checklist. **Bước 5 bắt buộc đọc.**

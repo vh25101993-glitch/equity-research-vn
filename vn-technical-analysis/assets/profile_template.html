@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{TICKER}} · Hồ sơ cổ phiếu (mode PROFILE)</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg-0:#0a0a14; --bg-1:#10101f; --bg-2:#16162a;
+  --card:rgba(28,28,48,0.55); --card-solid:#1a1a2e;
+  --border:rgba(139,92,246,0.18); --border-hot:rgba(236,72,153,0.35);
+  --text:#f0f0ff; --text-dim:#8b8ba7; --text-faint:#5a5a72;
+  --purple:#a855f7; --purple-2:#8b5cf6; --pink:#ec4899; --cyan:#06b6d4;
+  --green:#10d98a; --green-soft:rgba(16,217,138,0.15);
+  --red:#ff4d6d; --red-soft:rgba(255,77,109,0.15); --amber:#fbbf24;
+  --grad-main:linear-gradient(135deg,#a855f7 0%,#ec4899 100%);
+  --grad-cool:linear-gradient(135deg,#06b6d4 0%,#8b5cf6 100%);
+  --grad-bg:radial-gradient(ellipse at 20% 0%,rgba(139,92,246,0.15) 0%,transparent 50%),
+            radial-gradient(ellipse at 80% 100%,rgba(236,72,153,0.12) 0%,transparent 50%);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg-0);color:var(--text);font-family:'Inter',sans-serif;line-height:1.5;overflow-x:hidden}
+body{background-image:var(--grad-bg);background-attachment:fixed;min-height:100vh}
+.mono{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
+.container{max-width:1280px;margin:0 auto;padding:24px 32px 80px}
+
+/* HERO */
+.hero{background:{{HERO_GRADIENT}};border:1px solid var(--border);border-radius:32px;padding:40px 44px;margin-bottom:28px;position:relative;overflow:hidden;backdrop-filter:blur(20px)}
+.hero::before{content:'';position:absolute;top:-100px;right:-50px;width:400px;height:400px;background:radial-gradient(circle,rgba(236,72,153,0.25),transparent 70%);filter:blur(40px);pointer-events:none}
+.hero-top{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;flex-wrap:wrap;position:relative;z-index:2}
+.ticker-badge{display:inline-flex;align-items:center;gap:10px;background:var(--grad-main);color:#fff;padding:6px 16px;border-radius:999px;font-weight:700;font-size:13px;letter-spacing:0.5px;box-shadow:0 8px 24px rgba(168,85,247,0.4)}
+.update-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(16,217,138,0.15);color:var(--green);padding:4px 12px;border-radius:999px;font-weight:600;font-size:11px;border:1px solid rgba(16,217,138,0.3);margin-left:8px;vertical-align:middle}
+.company-name{font-size:42px;font-weight:800;margin-top:14px;letter-spacing:-1px;background:linear-gradient(90deg,#fff,#c4b5fd);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.company-sub{color:var(--text-dim);margin-top:6px;font-size:15px}
+.price-block{text-align:right}
+.price-now{font-size:52px;font-weight:800;letter-spacing:-1.5px}
+.price-now .ccy{font-size:22px;color:var(--text-dim);font-weight:500;margin-right:6px}
+.price-unit{font-size:14px;color:var(--text-faint);font-weight:400}
+.price-meta{margin-top:8px;color:var(--text-dim);font-size:13px}
+.kpi-strip{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-top:32px;position:relative;z-index:2}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:18px;backdrop-filter:blur(12px);transition:transform .25s,border-color .25s}
+.kpi:hover{transform:translateY(-3px);border-color:var(--border-hot)}
+.kpi-label{font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:1px;font-weight:600}
+.kpi-value{font-size:24px;font-weight:700;margin-top:6px}
+.kpi-delta{font-size:12px;margin-top:4px;font-weight:600}
+.pos{color:var(--green)} .neg{color:var(--red)} .neu{color:var(--amber)}
+
+/* SECTION TITLE */
+.section-title{display:flex;align-items:center;gap:12px;margin:44px 0 20px}
+.section-title h2{font-size:24px;font-weight:700;letter-spacing:-0.5px}
+.section-title .tag{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 10px;border-radius:6px;color:#fff}
+.tag.purple{background:var(--purple)} .tag.pink{background:var(--pink)} .tag.cyan{background:var(--cyan);color:#000} .tag.amber{background:var(--amber);color:#000}
+.divider-line{flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)}
+
+/* GRID + CARD */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.grid-2-1{display:grid;grid-template-columns:2fr 1fr;gap:20px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:24px;padding:24px;backdrop-filter:blur(14px);position:relative;overflow:hidden}
+.card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.card-title{font-size:15px;font-weight:600;color:var(--text)}
+.card-sub{font-size:12px;color:var(--text-faint);margin-top:2px}
+.chart-wrap{position:relative;height:280px}
+.chart-wrap.sm{height:220px} .chart-wrap.lg{height:340px}
+#chartCandlestick{width:100%;height:100%;display:block}
+
+/* TABLE */
+.fin-table{width:100%;border-collapse:collapse;font-size:13px}
+.fin-table th{text-align:right;padding:12px 10px;color:var(--text-faint);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--border)}
+.fin-table th:first-child{text-align:left}
+.fin-table td{padding:12px 10px;text-align:right;border-bottom:1px solid rgba(139,92,246,0.08)}
+.fin-table td:first-child{text-align:left;color:var(--text-dim);font-weight:500}
+.fin-table tbody tr:hover{background:rgba(168,85,247,0.05)}
+.fin-table .row-strong td{font-weight:700;color:var(--text);background:rgba(168,85,247,0.06)}
+.fin-table .row-strong td:first-child{color:var(--purple)}
+
+/* CALLOUT (guardrail / non-conclusion) */
+.callout{border-radius:14px;padding:14px 18px;margin:14px 0;font-size:13px;line-height:1.6;border-left:4px solid var(--purple);background:rgba(168,85,247,0.06)}
+.callout h4{font-size:13px;font-weight:700;margin-bottom:6px}
+.callout.warn{border-color:var(--red);background:rgba(255,77,109,0.06)}
+.callout.warn h4{color:var(--red)}
+.callout.good{border-color:var(--green);background:rgba(16,217,138,0.06)}
+.callout.good h4{color:var(--green)}
+.callout.info{border-color:var(--cyan);background:rgba(6,182,212,0.06)}
+.callout.info h4{color:var(--cyan)}
+.callout ul{margin:6px 0 0 18px;padding:0}
+
+/* PROFILE VERDICT (non-advice — KHÔNG BUY/SELL) */
+.profile-read-card{background:linear-gradient(135deg,rgba(168,85,247,0.12),rgba(6,182,212,0.08));border:1px solid var(--border-hot);border-radius:24px;padding:28px 32px;margin-bottom:24px;backdrop-filter:blur(14px);position:relative;overflow:hidden}
+.profile-read-card::before{content:'';position:absolute;top:-80px;right:-30px;width:300px;height:300px;background:radial-gradient(circle,rgba(168,85,247,0.18),transparent 70%);filter:blur(30px)}
+.read-label{display:inline-flex;align-items:center;gap:8px;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--purple);background:rgba(168,85,247,0.15);padding:5px 12px;border-radius:6px;margin-bottom:14px;position:relative;z-index:2}
+.read-archetype{font-size:22px;font-weight:800;letter-spacing:-0.5px;margin-bottom:12px;line-height:1.3;position:relative;z-index:2}
+.read-archetype .pill{font-size:13px;font-weight:700;padding:4px 14px;border-radius:999px;margin-left:10px;vertical-align:middle}
+.read-archetype .pill.trend_following{background:rgba(6,182,212,0.2);color:var(--cyan);border:1px solid rgba(6,182,212,0.4)}
+.read-archetype .pill.accumulation_breakout{background:rgba(139,92,246,0.2);color:var(--purple-2);border:1px solid rgba(139,92,246,0.4)}
+.read-archetype .pill.trap_prone{background:rgba(255,77,109,0.2);color:var(--red);border:1px solid rgba(255,77,109,0.4)}
+.read-archetype .pill.mixed,.read-archetype .pill.no_current_setup{background:rgba(251,191,24,0.2);color:var(--amber);border:1px solid rgba(251,191,24,0.4)}
+.read-body{font-size:14px;color:var(--text-dim);line-height:1.7;margin-bottom:18px;position:relative;z-index:2}
+.read-body strong{color:var(--text);font-weight:600}
+
+/* ARCHETYPE ICON BADGE */
+.archetype-icon{flex:0 0 80px;height:80px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:36px;background:var(--grad-cool);box-shadow:0 8px 24px rgba(6,182,212,0.3)}
+.profile-read-grid{display:grid;grid-template-columns:80px 1fr;gap:20px;align-items:center;position:relative;z-index:2}
+
+/* NAV + UTILITIES */
+.topnav{position:sticky;top:0;z-index:1000;background:rgba(10,10,20,0.85);backdrop-filter:blur(20px);border-bottom:1px solid rgba(139,92,246,0.2);padding:0 16px}
+.topnav-inner{max-width:1280px;margin:0 auto;display:flex;align-items:center;gap:6px;overflow-x:auto;scrollbar-width:thin;scrollbar-color:rgba(139,92,246,0.3) transparent}
+.topnav-inner::-webkit-scrollbar{height:4px}
+.topnav-inner::-webkit-scrollbar-thumb{background:rgba(139,92,246,0.3);border-radius:2px}
+.topnav-brand{display:flex;align-items:center;gap:8px;padding:10px 14px 10px 0;font-weight:800;font-size:13px;color:var(--purple);white-space:nowrap;border-right:1px solid rgba(139,92,246,0.15);margin-right:6px}
+.topnav-brand .dot-color{width:8px;height:8px;border-radius:50%;background:var(--grad-main)}
+.topnav-link{padding:10px 12px;font-size:12px;font-weight:600;color:var(--text-dim);text-decoration:none;white-space:nowrap;border-radius:8px;transition:all .2s;border-bottom:2px solid transparent}
+.topnav-link:hover{color:var(--text);background:rgba(139,92,246,0.08)}
+.topnav-link.active{color:var(--purple);border-bottom-color:var(--purple);background:rgba(168,85,247,0.1)}
+.progress-bar{position:fixed;top:0;left:0;height:3px;background:var(--grad-main);width:0;z-index:1001;transition:width .1s ease;box-shadow:0 0 12px rgba(168,85,247,0.6)}
+.back-top{position:fixed;bottom:24px;right:24px;width:44px;height:44px;border-radius:50%;background:var(--grad-main);color:#fff;border:none;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(168,85,247,0.4);opacity:0;transform:translateY(20px);transition:all .3s;z-index:999}
+.back-top.visible{opacity:1;transform:translateY(0)}
+.back-top:hover{transform:translateY(-3px) scale(1.05)}
+footer{margin-top:60px;padding-top:24px;border-top:1px solid var(--border);color:var(--text-faint);font-size:12px;text-align:center;line-height:1.8}
+.disclaimer{background:rgba(251,191,24,0.06);border:1px solid rgba(251,191,24,0.2);border-radius:14px;padding:14px 18px;margin-top:24px;font-size:12px;color:var(--text-dim)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.fade{animation:fadeUp .6s ease both}
+@media (max-width:1100px){.kpi-strip{grid-template-columns:repeat(3,1fr)}.grid-2,.grid-3,.grid-2-1{grid-template-columns:1fr}.profile-read-grid{grid-template-columns:1fr}.archetype-icon{margin:0 auto}}
+@media (max-width:600px){.container{padding:16px}.hero{padding:24px;border-radius:20px}.company-name{font-size:30px}.price-now{font-size:38px}.kpi-strip{grid-template-columns:repeat(2,1fr)}.topnav-brand{display:none}.topnav-link{padding:8px 10px;font-size:11px}}
+</style>
+</head>
+<body>
+<div class="progress-bar" id="progressBar"></div>
+
+<nav class="topnav"><div class="topnav-inner">
+  <div class="topnav-brand"><span class="dot-color"></span>PROFILE · {{TICKER}}</div>
+  <a href="#read" class="topnav-link active">Đọc như</a>
+  <a href="#chart" class="topnav-link">Biểu đồ nến</a>
+  <a href="#price" class="topnav-link">Vị trí giá</a>
+  <a href="#risk" class="topnav-link">Mức giảm & rủi ro</a>
+  <a href="#flow" class="topnav-link">Dòng tiền</a>
+  <a href="#bench" class="topnav-link">So VNINDEX</a>
+  <a href="#vap" class="topnav-link">Volume-at-price</a>
+  <a href="#setup" class="topnav-link">Mẫu hình</a>
+  <a href="#notes" class="topnav-link">Lưu ý</a>
+</div></nav>
+
+<div class="container">
+
+  <!-- HERO -->
+  <header class="hero fade">
+    <div class="hero-top">
+      <div>
+        <span class="ticker-badge">⚡ {{TICKER}}</span>
+        <span class="update-badge"><span class="live-dot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);margin-right:4px"></span>Cập nhật {{LATEST_DATE}}</span>
+        <h1 class="company-name">{{COMPANY_NAME}}</h1>
+        <p class="company-sub">{{EXCHANGE_INDUSTRY}} · Hồ sơ hành vi giá-khối lượng (mode PROFILE)</p>
+      </div>
+      <div class="price-block">
+        <div class="price-now"><span class="ccy">₫</span>{{LATEST_CLOSE_DISPLAY}}</div>
+        <div class="price-unit">đóng cửa (giá nghìn đồng ×1000 = đồng)</div>
+        <div class="price-meta">{{SAMPLE_PERIOD}} · {{SAMPLE_SIZE}} phiên</div>
+      </div>
+    </div>
+    <div class="kpi-strip">
+      <div class="kpi"><div class="kpi-label">Hiệu suất 1 tháng</div><div class="kpi-value {{KPI_RETURN_1M_CLASS}}">{{KPI_RETURN_1M}}</div></div>
+      <div class="kpi"><div class="kpi-label">Hiệu suất 3 tháng</div><div class="kpi-value {{KPI_RETURN_3M_CLASS}}">{{KPI_RETURN_3M}}</div></div>
+      <div class="kpi"><div class="kpi-label">Hiệu suất 1 năm</div><div class="kpi-value {{KPI_RETURN_1Y_CLASS}}">{{KPI_RETURN_1Y}}</div></div>
+      <div class="kpi"><div class="kpi-label">Độ biến động (60 phiên)</div><div class="kpi-value">{{KPI_HV60}}</div><div class="kpi-delta neu">đang ở mức {{KPI_HV60_PERCENTILE}}/100 so với năm qua</div></div>
+      <div class="kpi"><div class="kpi-label">Đang thấp hơn đỉnh</div><div class="kpi-value neg">{{KPI_DRAWDOWN}}</div><div class="kpi-delta neu">chưa lấy lại đỉnh {{KPI_UNDERWATER}} phiên</div></div>
+      <div class="kpi"><div class="kpi-label">Beta · Độ khớp (1 năm)</div><div class="kpi-value">{{KPI_BETA}}</div><div class="kpi-delta neu">Độ khớp {{KPI_R2}} → {{KPI_R2_LABEL}}</div></div>
+    </div>
+  </header>
+
+  <!-- PROFILE READ CARD (non-advice — KHÔNG BUY/SELL) -->
+  <section id="read" class="fade">
+    <div class="profile-read-card">
+      <div class="profile-read-grid">
+        <div class="archetype-icon">{{ARCHETYPE_ICON}}</div>
+        <div>
+          <span class="read-label">📖 Đọc như</span>
+          <div class="read-archetype">Cổ phiếu kiểu <span class="pill {{ARCHETYPE_PRIMARY}}">{{ARCHETYPE_PRIMARY_VI}}</span></div>
+          <p class="read-body">{{ARCHETYPE_NOTE}}</p>
+        </div>
+      </div>
+    </div>
+    <div class="callout info">
+      <h4>💡 Đây là hồ sơ mô tả, không phải khuyến nghị</h4>
+      <p>Archetype suy ra từ setup hiện tại + hành vi volume lịch sử. Mọi số liệu dưới đây là <strong>quan sát quá khứ</strong>, không phải dự báo hay tín hiệu giao dịch.</p>
+    </div>
+  </section>
+
+  <!-- SECTION: BIỂU ĐỒ NẾN & KHỐI LƯỢNG -->
+  <section id="chart" class="fade">
+    <div class="section-title"><span class="tag cyan">★</span><h2>Biểu đồ nến & khối lượng</h2><span class="divider-line"></span></div>
+    <div class="card">
+      <div class="card-head"><div><div class="card-title">Biểu đồ nến + khối lượng — {{SAMPLE_LAST_N}} phiên gần nhất</div><div class="card-sub">Nến xanh = phiên tăng, đỏ = phiên giảm · Đường vàng = giá TB 20 phiên, đường cyan = giá TB 50 phiên · Nét đứt = đỉnh/đáy trong 1 năm qua</div></div></div>
+      <div style="position:relative;height:380px"><canvas id="chartCandlestick"></canvas></div>
+    </div>
+    <div class="callout"><h4>Lưu ý khi đọc — Biểu đồ nến</h4>Giá tính theo nghìn đồng (vnstock). Đường trung bình và mức đỉnh/đáy chỉ là <strong>quan sát lịch sử</strong>, không phải vùng sẽ giao dịch hay dự báo tương lai. Khối lượng tính theo triệu cổ phiếu.</div>
+  </section>
+
+  <!-- SECTION 1: VỊ TRÍ GIÁ & BIẾN ĐỘNG -->
+  <section id="price" class="fade">
+    <div class="section-title"><span class="tag purple">01</span><h2>Vị trí giá & biến động</h2><span class="divider-line"></span></div>
+    <div class="grid-2-1">
+      <div class="card">
+        <div class="card-head"><div><div class="card-title">Hiệu suất hiện tại đang ở đâu so với lịch sử</div><div class="card-sub">Thanh màu = vị trí của lợi suất hiện tại trong lịch sử chính mã (100 = cao nhất từng thấy) — 4 khoảng thời gian</div></div></div>
+        <div class="chart-wrap"><canvas id="chartRolling"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div><div class="card-title">Biên độ & biến động</div></div></div>
+        <table class="fin-table">
+          <tbody>
+            <tr><td>Cách đỉnh 52 tuần</td><td><strong class="neg">{{PRICE_DIST_HIGH}}</strong></td></tr>
+            <tr><td>Cách đáy 52 tuần</td><td><strong class="pos">{{PRICE_DIST_LOW}}</strong></td></tr>
+            <tr><td>Biến động 20 phiên (HV20)</td><td>{{HV20}}</td></tr>
+            <tr><td>Biến động 60 phiên (HV60)</td><td>{{HV60_DETAIL}}</td></tr>
+            <tr><td>Biến động 120 phiên (HV120)</td><td>{{HV120}}</td></tr>
+            <tr><td>Biến động 1 năm (HV252)</td><td>{{HV252}}</td></tr>
+            <tr><td>Biên dao động TB (63 phiên)</td><td>{{RANGE_MEDIAN_63D}}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="callout"><h4>Lưu ý khi đọc — Vị trí giá & biến động</h4>Các khoảng thời gian trong bảng <strong>chồng lấp nhau</strong>, nên không phải quan sát độc lập và không phải xác suất tương lai. Độ biến động đo mức dao động đã xảy ra, không phải dải giá sẽ xảy ra.</div>
+  </section>
+
+  <!-- SECTION 2: MỨC GIẢM & RỦI RO ĐUÔI -->
+  <section id="risk" class="fade">
+    <div class="section-title"><span class="tag pink">02</span><h2>Mức giảm & rủi ro đuôi</h2><span class="divider-line"></span></div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-head"><div><div class="card-title">Các phiên tăng giảm phân bố thế nào (1 năm)</div><div class="card-sub">Cột càng cao = số phiên ở mức đó càng nhiều. Xanh = tăng, đỏ = giảm</div></div></div>
+        <div class="chart-wrap"><canvas id="chartDist"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div><div class="card-title">Những phiên giảm mạnh nhất</div><div class="card-sub">Ngày xấu từng xảy ra trong năm qua — đọc để biết rủi ro, không phải dự báo</div></div></div>
+        <table class="fin-table">
+          <tbody>
+            <tr><td>Đang thấp hơn đỉnh bao nhiêu</td><td><strong class="neg">{{DRAWDOWN_CURRENT}}</strong></td></tr>
+            <tr><td>Sụt giảm sâu nhất từng ghi nhận</td><td class="neg">{{DRAWDOWN_MAX}}</td></tr>
+            <tr><td>Chưa lấy lại đỉnh sau bao nhiêu phiên</td><td>{{UNDERWATER_DAYS}}</td></tr>
+            <tr><td>Ngày giảm tồi tệ — 95% thời gian không vượt (VaR 95)</td><td class="neg">{{VAR_95}}</td></tr>
+            <tr><td>Ngày giảm tồi tệ — 99% thời gian không vượt (VaR 99)</td><td class="neg">{{VAR_99}}</td></tr>
+            <tr><td>Mức giảm TB những ngày tồi tệ (ES 95)</td><td class="neg">{{ES_95}}</td></tr>
+            <tr><td>Số ngày giảm ≥5% (trong 1 năm)</td><td>{{DOWN_5PCT_DAYS}}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="callout warn"><h4>⚠️ Lưu ý khi đọc — Những phiên giảm mạnh</h4>Các con số trên là <strong>những gì đã từng xảy ra</strong> trong lịch sử, không phải dự báo tương lai. Rủi ro thực tế có thể nặng hơn hoặc nhẹ hơn tùy giai đoạn thị trường và dữ liệu chưa điều chỉnh sự kiện vốn.</div>
+  </section>
+
+  <!-- SECTION 3: DÒNG TIỀN & XÁC NHẬN -->
+  <section id="flow" class="fade">
+    <div class="section-title"><span class="tag cyan">03</span><h2>Dòng tiền & xác nhận giá-khối lượng</h2><span class="divider-line"></span></div>
+    <div class="grid-3">
+      <div class="card"><div class="card-head"><div class="card-title">Giá và khối lượng có cùng chiều? (VPCI)</div></div><div class="kpi-value">{{VPCI_VALUE}}</div><div class="kpi-delta neu">đang ở mức {{VPCI_PERCENTILE}}/100 so với năm qua</div><div style="margin-top:10px;font-size:13px;font-weight:700;color:var(--cyan)">{{CONFIRMATION_LABEL}}</div></div>
+      <div class="card"><div class="card-head"><div class="card-title">Dòng tiền vào hay ra? (CMF)</div></div><div class="kpi-value {{CMF_CLASS}}">{{CMF_20}}</div><div class="kpi-delta neu">60 phiên: {{CMF_60}}</div><div style="margin-top:10px;font-size:13px;font-weight:700;color:var(--{{CMF_COLOR_TOKEN}})">{{MONEY_FLOW_LABEL}}</div></div>
+      <div class="card"><div class="card-head"><div class="card-title">Sau phiên giao dịch lớn</div></div><div class="kpi-value">{{HVB_COUNT}}</div><div class="kpi-delta neu">lần/năm · mức tăng TB 20 phiên sau: {{HVB_MEDIAN}}</div><div style="margin-top:10px;font-size:13px;font-weight:700;color:var(--amber)">{{HVB_LABEL}}</div></div>
+    </div>
+    <div class="callout"><h4>Lưu ý khi đọc — Dòng tiền</h4>Các chỉ báo dòng tiền chỉ đo áp lực từ dữ liệu giá + khối lượng từng ngày; <strong>không cho thấy</strong> dòng tiền thực của khối lớn (block trade), sổ lệnh trong phiên hay dữ liệu intraday. Đây là quan sát lịch sử, không phải tín hiệu giao dịch.</div>
+  </section>
+
+  <!-- SECTION 4: SO VNINDEX -->
+  <section id="bench" class="fade">
+    <div class="section-title"><span class="tag purple">04</span><h2>So với VNINDEX</h2><span class="divider-line"></span></div>
+    <div class="grid-2-1">
+      <div class="card">
+        <div class="card-head"><div><div class="card-title">{{TICKER}} vs VNINDEX (base 100)</div><div class="card-sub">So sánh đường đi 1 năm — 2 chuỗi quy về 100 tại điểm bắt đầu</div></div></div>
+        <div class="chart-wrap"><canvas id="chartBench"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div><div class="card-title">Metrics</div><div class="card-sub">3 cửa sổ</div></div></div>
+        <table class="fin-table">
+          <thead><tr><th>Khung thời gian</th><th>Beta<br><span style="font-weight:400;text-transform:none">đu theo thị trường</span></th><th>Tương quan<br><span style="font-weight:400;text-transform:none">đi cùng thị trường</span></th><th>Độ khớp (R²)<br><span style="font-weight:400;text-transform:none">đáng tin cậy</span></th></tr></thead>
+          <tbody>{{BENCH_TABLE_ROWS}}</tbody>
+        </table>
+        <div style="margin-top:14px;font-size:12px;color:var(--text-dim)">Hiệu suất {{TICKER}} (1 năm): <strong class="{{REL_RETURN_CLASS}}">{{STOCK_RETURN_252}}</strong> · VNINDEX: <strong>{{BENCH_RETURN_252}}</strong> · Chênh so thị trường: <strong class="{{REL_RETURN_CLASS}}">{{REL_RETURN_252}}</strong></div>
+      </div>
+    </div>
+    <div class="callout info"><h4>Lưu ý khi đọc — So với VNINDEX</h4>Beta thấp <strong>không đồng nghĩa ít rủi ro</strong>; khi độ khớp (R²) thấp (&lt;0.40) thì không nên đọc beta quá sâu. Đây là so sánh lịch sử, không phải dự báo tương lai.</div>
+  </section>
+
+  <!-- SECTION 5: VOLUME-AT-PRICE -->
+  <section id="vap" class="fade">
+    <div class="section-title"><span class="tag amber">05</span><h2>Khối lượng giao dịch theo từng mức giá</h2><span class="divider-line"></span></div>
+    <div class="grid-2-1">
+      <div class="card">
+        <div class="card-head"><div><div class="card-title">Tiền đổ vào mức giá nào nhiều nhất (252 phiên)</div><div class="card-sub">Chia 12 khoảng giá — cột càng cao = mức giá đó giao dịch càng nhiều</div></div></div>
+        <div class="chart-wrap lg"><canvas id="chartVAP"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div><div class="card-title">Trạng thái</div></div></div>
+        <table class="fin-table">
+          <tbody>
+            <tr><td>Mức giá được giao dịch nhiều nhất</td><td><strong>{{POC_BIN}}</strong></td></tr>
+            <tr><td>Mức giá hiện tại đang ở khoảng nào</td><td>{{CURRENT_BIN}}</td></tr>
+            <tr><td>Tập trung ở 3 mức giá giao dịch nhiều nhất</td><td>{{VAP_CONCENTRATION}}</td></tr>
+          </tbody>
+        </table>
+        <div style="margin-top:14px;padding:10px 14px;background:rgba(168,85,247,0.08);border-left:3px solid var(--purple);border-radius:0 10px 10px 0;font-size:13px"><strong style="color:var(--purple)">{{ACCEPTANCE_LABEL}}</strong></div>
+      </div>
+    </div>
+    <div class="callout"><h4>Lưu ý khi đọc — Khối lượng theo mức giá</h4>Đây là xấp xỉ từ dữ liệu ngày; không thay thế sổ lệnh trong phiên (order book), khớp lệnh thực tế hay dữ liệu intraday. Chỉ cho thấy tổng quan tiền đã đổ vào đâu.</div>
+  </section>
+
+  <!-- SECTION 6: MẪU HÌNH & ARCHETYPE -->
+  <section id="setup" class="fade">
+    <div class="section-title"><span class="tag pink">06</span><h2>Lớp mẫu hình phụ trợ</h2><span class="divider-line"></span></div>
+    <div class="card">
+      <div class="card-head"><div><div class="card-title">Setups chiều tăng (8 heuristic)</div><div class="card-sub">Score 0-100 · status · vùng xác nhận — KHÔNG phải tín hiệu mua bán</div></div></div>
+      <table class="fin-table">
+        <thead><tr><th>Mẫu hình</th><th>Điểm sạch<br><span style="font-weight:400;text-transform:none">(0-100)</span></th><th>Trạng thái</th><th>Vùng cần vượt để xác nhận</th><th>Còn cách</th></tr></thead>
+        <tbody>{{SETUPS_TABLE_ROWS}}</tbody>
+      </table>
+      {{SETUPS_EMPTY_NOTE}}
+    </div>
+    <div class="callout info"><h4>📖 Cách đọc mẫu hình này</h4>{{SETUPS_READER_NOTE}}</div>
+  </section>
+
+  <!-- SECTION 7: LƯU Ý KHI ĐỌC (non-conclusion) -->
+  <section id="notes" class="fade">
+    <div class="section-title"><span class="tag amber">07</span><h2>Lưu ý khi đọc</h2><span class="divider-line"></span></div>
+    <div class="callout warn">
+      <h4>⚠️ Đây là hồ sơ mô tả, KHÔNG phải khuyến nghị</h4>
+      <ul>{{NON_CONCLUSION_LIST}}</ul>
+    </div>
+    <div class="disclaimer">
+      <strong>Minh bạch dữ liệu:</strong> Nguồn vnstock (VCI), daily OHLCV. Mẫu {{SAMPLE_SIZE}} phiên ({{SAMPLE_PERIOD}}). Giá theo nghìn đồng. Dữ liệu chưa điều chỉnh corporate actions được kiểm chứng đầy đủ. Regime/membership là snapshot hiện tại, không point-in-time.
+    </div>
+  </section>
+
+  <footer>
+    Hồ sơ cổ phiếu <strong>{{TICKER}}</strong> · mode PROFILE (vn-technical-analysis)<br>
+    Sinh lúc {{GENERATED_AT}} · Schema <code>vn-technical-profile-v1</code> · Ngôn ngữ <code>neutral_descriptive_non_advice</code><br>
+    Methodology port từ <em>market_stats/build_stock_profile_foundation</em>
+  </footer>
+</div>
+
+<button class="back-top" id="backTop" aria-label="Lên đầu trang">↑</button>
+
+<script>
+// ===== Chart.js defaults (hấp thụ từ longform chart_recipes) =====
+Chart.defaults.color = '#8b8ba7';
+Chart.defaults.font.family = 'Inter, -apple-system, sans-serif';
+Chart.defaults.borderColor = 'rgba(139,92,246,0.08)';
+
+// ===== CHART DATA (fill từ profile JSON) =====
+const ROLLING_DATA = {{ROLLING_DATA}};
+const DIST_DATA = {{DIST_DATA}};
+const VAP_DATA = {{VAP_DATA}};
+const BENCH_DATA = {{BENCH_DATA}};
+const CANDLESTICK_DATA = {{CANDLESTICK_DATA}};
+const MA20_DATA = {{MA20_DATA}};
+const MA50_DATA = {{MA50_DATA}};
+const HIGH52W_PRICE = {{HIGH52W_PRICE}};
+const LOW52W_PRICE = {{LOW52W_PRICE}};
+const CHART_MONTHS = {{CHART_MONTHS}};
+
+// ===== CANDLESTICK + VOLUME (custom canvas 2D, port từ technical_template) =====
+(function(){
+  const canvas = document.getElementById('chartCandlestick');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const candles = CANDLESTICK_DATA; // [{d,o,h,l,c,v}] — giá nghìn đồng, v = triệu CP
+  if (!candles.length) return;
+  function draw() {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    const W = Math.max(100, rect.width);
+    const H = Math.max(100, rect.height);
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    const priceH = H * 0.65, volH = H * 0.25, gap = H * 0.05;
+    const volY = priceH + gap;
+    const padLeft = 50, padRight = 20, padTop = 10, padBot = 20;
+    const chartW = W - padLeft - padRight;
+    const priceTop = padTop, priceBot = priceH - padBot;
+    const volTop = volY + 10, volBot = volY + volH;
+    let pMin = Infinity, pMax = -Infinity;
+    candles.forEach(c => { pMin = Math.min(pMin, c.l); pMax = Math.max(pMax, c.h); });
+    const pPad = (pMax - pMin) * 0.05;
+    pMin -= pPad; pMax += pPad;
+    const priceToY = p => priceTop + (priceBot - priceTop) * (pMax - p) / (pMax - pMin);
+    const n = candles.length;
+    const candleW = Math.max(3, chartW / n * 0.7);
+    const xStep = chartW / n;
+    const idxToX = i => padLeft + xStep * (i + 0.5);
+    // Grid + Y labels (giá nghìn đồng → hiện dạng K)
+    ctx.strokeStyle = 'rgba(139,92,246,0.08)'; ctx.lineWidth = 1;
+    ctx.fillStyle = '#5a5a72'; ctx.font = '10px JetBrains Mono'; ctx.textAlign = 'right';
+    for (let g = 0; g <= 5; g++) {
+      const p = pMin + (pMax - pMin) * g / 5;
+      const y = priceToY(p);
+      ctx.beginPath(); ctx.moveTo(padLeft, y); ctx.lineTo(W - padRight, y); ctx.stroke();
+      ctx.fillText(p.toFixed(1), padLeft - 5, y + 3);
+    }
+    // MA20 (vàng)
+    ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 1.5; ctx.beginPath();
+    let started = false;
+    MA20_DATA.forEach((v, i) => { if (v === null) return; const x = idxToX(i), y = priceToY(v); if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y); });
+    ctx.stroke();
+    // MA50 (cyan)
+    ctx.strokeStyle = '#06b6d4'; ctx.beginPath(); started = false;
+    MA50_DATA.forEach((v, i) => { if (v === null) return; const x = idxToX(i), y = priceToY(v); if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y); });
+    ctx.stroke();
+    // Resistance = đỉnh 52 tuần
+    ctx.strokeStyle = 'rgba(255,77,109,0.5)'; ctx.setLineDash([4,4]); ctx.lineWidth = 1;
+    const resY = priceToY(HIGH52W_PRICE);
+    ctx.beginPath(); ctx.moveTo(padLeft, resY); ctx.lineTo(W - padRight, resY); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,77,109,0.8)'; ctx.textAlign = 'left'; ctx.font = '9px Inter';
+    ctx.fillText('R ' + (HIGH52W_PRICE).toFixed(1) + ' (đỉnh 52W)', padLeft + 4, resY - 5);
+    // Support = đáy 52 tuần
+    ctx.strokeStyle = 'rgba(16,217,138,0.5)';
+    const supY = priceToY(LOW52W_PRICE);
+    ctx.beginPath(); ctx.moveTo(padLeft, supY); ctx.lineTo(W - padRight, supY); ctx.stroke();
+    ctx.fillStyle = 'rgba(16,217,138,0.8)';
+    ctx.fillText('S ' + (LOW52W_PRICE).toFixed(1) + ' (đáy 52W)', padLeft + 4, supY + 12);
+    ctx.setLineDash([]);
+    // Candles
+    candles.forEach((c, i) => {
+      const x = idxToX(i);
+      const isUp = c.c >= c.o;
+      const color = isUp ? '#10d98a' : '#ff4d6d';
+      const yHigh = priceToY(c.h), yLow = priceToY(c.l);
+      const yOpen = priceToY(c.o), yClose = priceToY(c.c);
+      const bodyTop = Math.min(yOpen, yClose);
+      const bodyH = Math.max(1, Math.abs(yClose - yOpen));
+      ctx.strokeStyle = color; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x, yHigh); ctx.lineTo(x, yLow); ctx.stroke();
+      ctx.fillStyle = color; ctx.fillRect(x - candleW/2, bodyTop, candleW, bodyH);
+    });
+    // Volume (màu theo nến)
+    const maxVol = Math.max(...candles.map(c => c.v).filter(v => v > 0));
+    const volToY = v => volBot - (volBot - volTop) * v / maxVol;
+    ctx.fillStyle = '#5a5a72'; ctx.font = '10px JetBrains Mono'; ctx.textAlign = 'right';
+    ctx.fillText(maxVol.toFixed(1) + 'M', padLeft - 5, volTop + 3);
+    ctx.fillText('0', padLeft - 5, volBot);
+    ctx.strokeStyle = 'rgba(139,92,246,0.08)';
+    ctx.beginPath(); ctx.moveTo(padLeft, volBot); ctx.lineTo(W - padRight, volBot); ctx.stroke();
+    candles.forEach((c, i) => {
+      const x = idxToX(i);
+      const isUp = c.c >= c.o;
+      if (c.v <= 0) return;
+      const y = volToY(c.v);
+      ctx.fillStyle = isUp ? 'rgba(16,217,138,0.5)' : 'rgba(255,77,109,0.5)';
+      ctx.fillRect(x - candleW/2, y, candleW, volBot - y);
+    });
+    // X labels (tháng từ CHART_MONTHS)
+    ctx.fillStyle = '#5a5a72'; ctx.font = '9px Inter'; ctx.textAlign = 'center';
+    const months = CHART_MONTHS;
+    const monthStep = Math.ceil(n / months.length);
+    months.forEach((m, i) => { const idx = i * monthStep + 2; if (idx < n) ctx.fillText(m, idxToX(idx), H - 5); });
+  }
+  draw();
+  let resizeTimer;
+  window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(draw, 100); });
+})();
+
+// ===== CHART 1: Rolling return percentile (bar) =====
+new Chart(document.getElementById('chartRolling'), {
+  type:'bar',
+  data:{ labels:ROLLING_DATA.labels,
+    datasets:[{ label:'Vị trí so với lịch sử (0-100)', data:ROLLING_DATA.percentiles,
+      backgroundColor:ROLLING_DATA.colors, borderRadius:6,
+      // đường return hiện tại dạng line order:1
+    },{ label:'Return hiện tại (%)', type:'line', data:ROLLING_DATA.returns,
+      borderColor:'#fbbf24', backgroundColor:'rgba(251,191,24,0.15)',
+      tension:.3, borderWidth:2, pointRadius:4, pointBackgroundColor:'#fbbf24', fill:false, order:1 }] },
+  options:{ responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:true, position:'top', labels:{color:'#e2e8f0', font:{size:11}, usePointStyle:true, boxWidth:8}},
+      tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+c.parsed.y+(c.datasetIndex===0?'/100':'%');}}} },
+    scales:{ y:{beginZero:true, grid:{color:'#334155'}}, x:{grid:{display:false}} } }
+});
+
+// ===== CHART 2: Return distribution histogram (bar) =====
+new Chart(document.getElementById('chartDist'), {
+  type:'bar',
+  data:{ labels:DIST_DATA.labels,
+    datasets:[{ label:'Số phiên', data:DIST_DATA.counts,
+      backgroundColor:DIST_DATA.colors, borderRadius:5 }] },
+  options:{ responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:false}, tooltip:{callbacks:{label:function(c){return c.parsed.y+' phiên';}}} },
+    scales:{ y:{beginZero:true, grid:{color:'#334155'}, title:{display:true, text:'Số phiên', color:'#8b8ba7'}},
+      x:{grid:{display:false}, ticks:{font:{size:9}}} } }
+});
+
+// ===== CHART 3: Volume-at-price (horizontal bar) =====
+new Chart(document.getElementById('chartVAP'), {
+  type:'bar',
+  data:{ labels:VAP_DATA.labels,
+    datasets:[{ label:'Khối lượng (%)', data:VAP_DATA.values,
+      backgroundColor:VAP_DATA.colors, borderRadius:4 }] },
+  options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y',
+    plugins:{ legend:{display:false}, tooltip:{callbacks:{label:function(c){return c.parsed.x+'%';}}} },
+    scales:{ x:{beginZero:true, grid:{color:'#334155'}, title:{display:true, text:'% khối lượng', color:'#8b8ba7'}},
+      y:{grid:{display:false}, ticks:{font:{size:9}}} } }
+});
+
+// ===== CHART 4: Benchmark compare (multi-line base-100) =====
+new Chart(document.getElementById('chartBench'), {
+  type:'line',
+  data:{ labels:BENCH_DATA.labels,
+    datasets:[
+      { label:'{{TICKER}}', data:BENCH_DATA.stock,
+        borderColor:'#a855f7', backgroundColor:'rgba(168,85,247,0.15)',
+        tension:.3, borderWidth:3, pointRadius:0, fill:true },
+      { label:'VNINDEX', data:BENCH_DATA.bench,
+        borderColor:'#06b6d4', backgroundColor:'rgba(6,182,212,0.1)',
+        tension:.3, borderWidth:2, borderDash:[6,4], pointRadius:0, fill:false }
+    ] },
+  options:{ responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:true, position:'top', labels:{color:'#e2e8f0', font:{size:11}, usePointStyle:true, boxWidth:8}},
+      tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+c.parsed.y.toFixed(1);}}} },
+    scales:{ y:{beginZero:false, grid:{color:'#334155'}, title:{display:true, text:'Base 100', color:'#8b8ba7'}},
+      x:{grid:{display:false}, ticks:{font:{size:9}, maxTicksLimit:8}} } }
+});
+</script>
+
+<script>
+// ===== Navigation: scrollspy + progress + back-top =====
+(function(){
+  const links = document.querySelectorAll('.topnav-link');
+  const sections = Array.from(links).map(l => document.querySelector(l.getAttribute('href'))).filter(Boolean);
+  const progress = document.getElementById('progressBar');
+  const backTop = document.getElementById('backTop');
+  function onScroll(){
+    const sc = window.scrollY; const docH = document.documentElement.scrollHeight - window.innerHeight;
+    progress.style.width = (docH>0?(sc/docH*100):0)+'%';
+    backTop.classList.toggle('visible', sc>400);
+    // scrollspy
+    let cur = sections[0];
+    for(const s of sections){ if(s.offsetTop-120 <= sc) cur = s; }
+    links.forEach(l => l.classList.toggle('active', l.getAttribute('href')==='#'+(cur?cur.id:'')));
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+  backTop.addEventListener('click', ()=>window.scrollTo({top:0,behavior:'smooth'}));
+  links.forEach(l => l.addEventListener('click', e=>{e.preventDefault(); const t=document.querySelector(l.getAttribute('href')); if(t) t.scrollIntoView({behavior:'smooth', block:'start'});}));
+  onScroll();
+})();
+</script>
+</body>
+</html>

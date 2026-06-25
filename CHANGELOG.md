@@ -54,6 +54,16 @@ Nâng cấp `vn-technical-analysis` thêm lớp phân tích thứ 2 — **mode P
 
 **Giữ nguyên (4):** indicators.md, pattern_detection.md, vnstock_usage.md, technical_template.html (mode ACTIVE)
 
+### 📁 research/ — Nguồn gốc methodology (reproducibility)
+
+- **5 file source gốc** port vào skill (KHÔNG cần để chạy, chỉ để kiểm chứng độc lập):
+  - `build_stock_profile_foundation.mjs` — 17 block profile
+  - `build_current_pattern_setups.py` — 8 setup heuristic
+  - `build_stock_pattern_profiles.py` — 4 sub-score (đã loại khỏi skill, cần scanner)
+  - `build_stock_pattern_personality_profiles.py` — family + archetype
+  - `generate_simple_stats_metric_dictionary.py` (excerpt) — 13 metric dictionary
+- `research/README.md` — map research ↔ skill (file nào port từ đâu, dòng nào)
+
 ### 🗺️ Roadmap cập nhật
 
 - [x] ~~Stock profile methodology (mode PROFILE)~~ ✅ v2.0.0

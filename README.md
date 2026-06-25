@@ -3,7 +3,7 @@
 Bộ 7 skills tạo pipeline phân tích equity research đầy đủ cho cổ phiếu Việt Nam — từ thu thập data đến dashboard HTML deploy được. Hoạt động với ZCode, Claude Code, Codex, hoặc bất kỳ AI agent nào hỗ trợ skills.
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)
 ![VN Stocks](https://img.shields.io/badge/Markets-HOSE%20%7C%20HNX%20%7C%20UPCoM-red.svg)
 
 ## 🎯 Tính năng
@@ -11,11 +11,34 @@ Bộ 7 skills tạo pipeline phân tích equity research đầy đủ cho cổ p
 - **Pipeline 7 bước tự động**: Data → Cơ bản → Định giá → Kỹ thuật → Tin tức → Dashboard → Deploy
 - **Data thật từ vnstock API** (open-source) — không mô phỏng
 - **Dashboard HTML tương tác** 10-12 sections với Chart.js (candlestick, RSI, MACD, scatter correlation...)
+- **🆕 mode PROFILE (v2.0.0)** — `vn-technical-analysis` giờ có 2 mode: ACTIVE (timing/BUY-SELL) + PROFILE (hồ sơ hành vi giá-khối lượng định lượng, phi-tư-vấn)
 - **7 bẫy dữ liệu đặc thù VN** — split-adjustment, số CP thay đổi, LNST thuộc CĐ mẹ, v.v.
 - **Phong cách fintech hiện đại** — dark theme, gradient tím-hồng, glassmorphism
 - **Tương quan giá dầu** đặc thù ngành lọc hóa dầu (case BSR)
 - **Bear case cân bằng** — không chỉ bullish
 - **Independent view** — tổng hợp quan điểm độc lập sau phân tích
+
+## 🆕 Mới trong v2.0.0 — mode PROFILE (stock profile)
+
+`vn-technical-analysis` nâng cấp thêm lớp phân tích thứ 2, hoạt động song song với mode ACTIVE (cũ):
+
+| | Mode ACTIVE (cũ) | Mode PROFILE (mới v2.0.0) |
+|---|---|---|
+| **Câu hỏi** | "Có nên mua/bán giờ?" | "Hồ sơ/personality cổ phiếu?" |
+| **Ngôn ngữ** | Tech Score → Verdict BUY/SELL | `neutral_descriptive_non_advice` — mô tả, KHÔNG verdict |
+| **Output** | HTML dashboard + JSON verdict | HTML dashboard + JSON profile |
+| **Method** | MA/RSI/MACD/Bollinger/Beta | 17 block định lượng + 8 setup + archetype |
+
+**Methodology mode PROFILE** (documentation đầy đủ trong skill, self-contained):
+- **17 block hồ sơ định lượng**: biến động, mức giảm, dòng tiền (VPCI/OBV/CMF), effort-result Wyckoff, volume-at-price, rủi ro đuôi (VaR/ES), PVI/NVI, regime...
+- **8 setup heuristic** chiều tăng + **5 pattern family** + **4 archetype**
+- **13 metric dictionary** với guardrail Việt + non-advice rules
+- **Dashboard HTML single-page** + biểu đồ nến/khối lượng custom Canvas 2D
+- **Ngôn ngữ đời thường** — tránh thuật ngữ khó (VaR→"Ngày giảm tồi tệ", VPCI→"Giá và khối lượng có cùng chiều")
+
+→ Người dùng chỉ cần hỏi "hồ sơ cổ phiếu HPG" thay vì "có nên mua HPG" để kích hoạt mode PROFILE.
+
+Xem chi tiết: [CHANGELOG.md](CHANGELOG.md)
 
 ## 📦 Cấu trúc
 
@@ -24,7 +47,8 @@ equity-research-vn/              # Orchestrator — chạy pipeline 7 bước
 ├── vn-financial-data-collector/ # Bước 1: Thu thập data (vnstock API)
 ├── vn-fundamental-analysis/    # Bước 2: EPS, ROE, DuPont decomposition
 ├── vn-valuation-engine/        # Bước 3: 9 PP định giá (DCF, PE/PB, Graham...)
-├── vn-technical-analysis/      # Bước 4: MA, RSI, MACD, Beta, patterns
+├── vn-technical-analysis/      # Bước 4: MA, RSI, MACD, Beta, patterns (ACTIVE)
+│                                #         + 🆕 mode PROFILE (hồ sơ giá-khối lượng, v2.0.0)
 ├── vn-news-digest/             # Bước 5: Bản tin 30 ngày + sentiment scoring
 └── vn-research-dashboard/      # Bước 6: Dashboard HTML + QA + deploy
 ```
@@ -100,7 +124,7 @@ vercel login  # 1 lần duy nhất
 | 1 | `vn-financial-data-collector` | JSON data 5 năm + audit split |
 | 2 | `vn-fundamental-analysis` | EPS, ROE, DuPont, CAGR |
 | 3 | `vn-valuation-engine` | 9 PP định giá + khuyến nghị |
-| 4 | `vn-technical-analysis` | MA, RSI, MACD, Beta, patterns |
+| 4 | `vn-technical-analysis` | MA, RSI, MACD, Beta, patterns (ACTIVE) **+ 🆕 hồ sơ giá-khối lượng 17 block (PROFILE, v2.0.0)** |
 | 5 | `vn-news-digest` | Sentiment score + 10 news cards |
 | 6 | `vn-research-dashboard` | HTML dashboard + QA + deploy |
 | 7 | (deploy) | URL Vercel |

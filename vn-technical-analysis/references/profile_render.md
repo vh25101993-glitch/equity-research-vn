@@ -310,12 +310,12 @@ echo "new Chart: $(grep -c 'new Chart' "$OUTPUT")"
 
 # Check 3: JS syntax check — extract <script> ra file tạm, node --check
 python3 -c "
-import re,sys
+import re,sys,tempfile
 html=open('$OUTPUT').read()
 scripts=re.findall(r'<script>(.*?)</script>', html, re.DOTALL)
-open('/tmp/profile_check.js','w').write('\n'.join(scripts))
-"
-node --check /tmp/profile_check.js
+with tempfile.NamedTemporaryFile(mode='w', suffix='.js', delete=False) as f:
+    f.write('\n'.join(scripts)); print(f.name)
+" | xargs node --check
 # Exit 0 = no syntax error.
 
 # Check 4: non-advice language — chỉ flag KHẲNG ĐỊNH (xem section lang phía trên)

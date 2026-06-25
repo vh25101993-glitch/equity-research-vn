@@ -327,7 +327,7 @@ Cấu trúc dashboard (7 section, scroll single-page, không minimap/chapter):
 ```bash
 grep -oE "{{[A-Z_0-9]+}}" {output}.html | sort -u           # Check 1: trống (không sót token)
 # canvas count == new Chart count (Check 2, =4)
-node --check /tmp/profile_check.js                           # Check 3: JS syntax OK
+# Check 3: JS syntax — extract <script> ra tempfile rồi node --check (xem profile_render.md QA)
 grep -iE "bullish|bearish|tín hiệu|khuyến nghị|nên mua|nên bán" {output}.html | grep -v "<script>"  # Check 4: trống
 ```
 

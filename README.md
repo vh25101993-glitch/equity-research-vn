@@ -3,7 +3,7 @@
 Bộ 7 skills tạo pipeline phân tích equity research đầy đủ cho cổ phiếu Việt Nam — từ thu thập data đến dashboard HTML deploy được. Hoạt động với ZCode, Claude Code, Codex, hoặc bất kỳ AI agent nào hỗ trợ skills.
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
-![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)
+![Version](https://img.shields.io/badge/version-2.1.0-blue.svg)
 ![VN Stocks](https://img.shields.io/badge/Markets-HOSE%20%7C%20HNX%20%7C%20UPCoM-red.svg)
 
 ## 🎯 Tính năng
@@ -11,12 +11,29 @@ Bộ 7 skills tạo pipeline phân tích equity research đầy đủ cho cổ p
 - **Pipeline 7 bước tự động**: Data → Cơ bản → Định giá → Kỹ thuật → Tin tức → Dashboard → Deploy
 - **Data thật từ vnstock API** (open-source) — không mô phỏng
 - **Dashboard HTML tương tác** 10-12 sections với Chart.js (candlestick, RSI, MACD, scatter correlation...)
-- **🆕 mode PROFILE (v2.0.0)** — `vn-technical-analysis` giờ có 2 mode: ACTIVE (timing/BUY-SELL) + PROFILE (hồ sơ hành vi giá-khối lượng định lượng, phi-tư-vấn)
+- **🆕 mode PROFILE (v2.0.0)** — `vn-technical-analysis` giờ có 2 mode: ACTIVE (timing/BUY-SELL) + PROFILE (hồ sơ hành vi giá-khối lượng định lượng, phi-tư vấn)
+- **🎨 `_viz-shared/` design system (v2.1.0)** — CSS/JS dùng chung tách bạch, 3 theme variants (Fintech/Bloomberg/Corporate) qua `data-theme`, chart registry "chart as plugin"
 - **7 bẫy dữ liệu đặc thù VN** — split-adjustment, số CP thay đổi, LNST thuộc CĐ mẹ, v.v.
 - **Phong cách fintech hiện đại** — dark theme, gradient tím-hồng, glassmorphism
 - **Tương quan giá dầu** đặc thù ngành lọc hóa dầu (case BSR)
 - **Bear case cân bằng** — không chỉ bullish
 - **Independent view** — tổng hợp quan điểm độc lập sau phân tích
+
+## 🎨 Mới trong v2.1.0 — `_viz-shared/` design system
+
+Refactor kiến trúc: tách CSS/JS dùng chung của dashboard template thành **1 nguồn duy nhất**, loại bỏ trùng lặp + tokenize template (trước hard-code HPG).
+
+| Trước (v2.0.0) | Sau (v2.1.0) |
+|---|---|
+| Bảng màu lặp 4 file (~52 dòng) | 1 file `tokens.css` |
+| Code vẽ nến ~100 dòng × 2 file | 1 hàm `viz.renderCandlestick()` |
+| Chart config lặp mỗi biểu đồ | Registry `viz.chart()` auto-merge |
+| Template hard-code HPG | `{{TICKER}}` qua `str.replace` |
+| Đổi theme = rewrite `:root` | `data-theme="bloomberg"` attribute |
+
+**3 pattern hiện thực hóa** (từ BI tool production như Metabase): design tokens, chart as plugin, build-time composition. Xem [`_viz-shared/README.md`](_viz-shared/README.md).
+
+> Đây là refactor nội bộ — giao diện dashboard giữ nguyên (đã verify screenshot).
 
 ## 🆕 Mới trong v2.0.0 — mode PROFILE (stock profile)
 
@@ -50,7 +67,9 @@ equity-research-vn/              # Orchestrator — chạy pipeline 7 bước
 ├── vn-technical-analysis/      # Bước 4: MA, RSI, MACD, Beta, patterns (ACTIVE)
 │                                #         + 🆕 mode PROFILE (hồ sơ giá-khối lượng, v2.0.0)
 ├── vn-news-digest/             # Bước 5: Bản tin 30 ngày + sentiment scoring
-└── vn-research-dashboard/      # Bước 6: Dashboard HTML + QA + deploy
+├── vn-research-dashboard/      # Bước 6: Dashboard HTML + QA + deploy
+└── _viz-shared/                # 🆕 v2.1.0: Design system dùng chung
+                                 #         (tokens.css, components.css, viz.js, inject.py)
 ```
 
 ## 🚀 Cài đặt

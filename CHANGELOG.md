@@ -4,6 +4,75 @@ Tất cả thay đổi đáng chú ý của bộ skill `equity-research-vn`.
 
 Format dựa trên [Keep a Changelog](https://keepachangelog.com/vi/1.1.0/), versioning theo [Semantic Versioning](https://semver.org/lang/vi/).
 
+## [2.1.0] — 2026-06-29
+
+### 🎨 `_viz-shared/` — Design system dùng chung (single source of truth)
+
+Tách CSS/JS dùng chung của dashboard template thành **1 design system duy nhất**, loại bỏ trùng lặp + tokenize template. Đây là refactor kiến trúc lớn nhất kể từ v2.0.0 — không thay đổi tính năng người dùng cuối, nhưng giảm đáng kể duplicate và bug class.
+
+#### Vấn đề trước
+
+- Bảng màu (`:root`) lặp **4 lần** trong 4 template — đổi 1 màu phải sửa 4 nơi
+- Code vẽ biểu đồ nến (~100 dòng) lặp **2 lần** (technical + profile)
+- `dashboard_template` + `technical_template` **hard-code HPG** → mỗi lần chạy skill sửa tay → dễ sót → root cause của bug "placeholder không replace" (Lessons learned #4)
+- 2 bug HTML: `technical_template.html:614` vỡ cú pháp (`class="signal-val buy"+21.8%`), nav lặp dòng "Mô hình nến"
+
+#### ✨ Added — `_viz-shared/` (5 file mới)
+
+- **`tokens.css`** — Design tokens `:root` + **3 theme variants** (Fintech mặc định / Bloomberg Terminal / Corporate sáng) qua `data-theme` attribute
+- **`components.css`** — Tất cả UI classes dùng chung (hero, card, kpi, fin-table, news-card, timeline, exec-summary, callout, topnav...) — không hardcode color
+- **`viz.js`** — **Chart registry** `viz.chart()` (pattern "chart as plugin", auto-merge legend/grid config) + `viz.renderCandlestick()` (trước đây ~100 dòng × 2) + `viz.setupNav()` (scrollspy + progress + back-top)
+- **`inject.py`** — Design-time tool: inline `_viz-shared/*` vào template qua `{{VIZ_CSS}}`/`{{VIZ_JS}}`, không đụng data `{{TOKEN}}`
+- **`README.md`** — Docs design system + pattern học được
+
+#### 🔧 Changed
+
+- **Tokenize** `dashboard_template.html` + `technical_template.html` (trước hard-code HPG → giờ `{{TICKER}}`/`{{COMPANY_NAME}}`/...)
+- **Refactor dùng shared lib**: `profile_template.html` (CSS+JS), `news_template.html` (CSS only)
+- **Theme switching**: từ rewrite `:root` (~30 dòng) → thêm `data-theme="..."` attribute (1 dòng)
+- **Chart rendering**: từ `new Chart(...)` lặp config → `viz.chart(id, spec)` registry
+
+#### 🐛 Fixed
+
+- `technical_template.html:614` — HTML vỡ `class="signal-val buy"+21.8%` → composite token
+- Nav duplicate "Mô hình nến" → mất
+- Root cause "Lessons learned #4" (placeholder không replace) → giải quyết tại nguồn (template tokenize)
+
+#### 🏛️ Patterns hiện thực hóa
+
+Học từ BI tool production (Metabase) áp dụng vào stack Chart.js:
+
+1. **Design tokens** — palette/radius/typography trong `:root`; theme = attribute override (không rewrite CSS)
+2. **Chart as plugin** — registry với base-config merge, mỗi chart chỉ ghi phần riêng
+3. **Build-time composition** — shared lib inline ra single-file template (Vercel-deployable, zero runtime deps)
+
+#### 📊 Đã verify
+
+- ✅ `node --check`: JS syntax sạch
+- ✅ Playwright QA (`qa_dashboard.js`): 7/7 canvas render data thật, 0 JS errors, hero + 7 sections + footer
+- ✅ Visual screenshot check: theme fintech, KPI cards, DuPont stacked chart render đúng
+- ✅ 0 `{{VIZ_*}}` placeholder sót trong built templates
+- ✅ Quét secret/path cá nhân trước push (repo public) — sạch
+
+#### 📁 Files (14)
+
+**Mới (5):** `_viz-shared/{tokens.css, components.css, viz.js, inject.py, README.md}`
+**Tokenize (2):** `dashboard_template.html`, `technical_template.html`
+**Refactor (2):** `profile_template.html`, `news_template.html`
+**Docs (5):** `data_binding.md`, `style_variants.md`, SKILL.md × 3 (`vn-research-dashboard`, `vn-technical-analysis`, `equity-research-vn` — Lessons learned #10)
+
+#### 🔁 Workflow mới
+
+- **Design-time** (hiếm): sửa `_viz-shared/*` → chạy `python3 _viz-shared/inject.py` → tái sinh template self-contained
+- **Report-time** (mỗi lần chạy skill): copy template → fill `{{TICKER}}` qua `str.replace` → single-file output → deploy Vercel
+
+#### 📌 Lưu ý
+
+- `longform-report` **không** thuộc pipeline này — chỉ đụng chart registry của nó (palette slate cố tình giữ vì là design system riêng có chủ đích, có `themes.md` riêng)
+- Đây là **refactor nội bộ** — output dashboard giao diện giữ nguyên (đã verify bằng screenshot). Version bump 2.0.0 → 2.1.0 (MINOR theo SemVer: thêm khả năng mới = theme switching + chart registry, không break API)
+
+---
+
 ## [2.0.0] — 2026-06-24
 
 ### 🎉 vn-technical-analysis — Thêm mode PROFILE (stock profile methodology)
